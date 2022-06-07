@@ -116,19 +116,34 @@ int main(int argc, char *argv[]) {
 		buf += pos+1;
 		dataln -= pos+1;
 	}
+
+	int n = 0;
+	char *evar;
+
 	for(int i = 0; i < newenvc; i++) {
 		if (dataln <= 0) {
 			fprintf(stderr, "%s: invalid data while reading envp\n", argv[0]);
 			return 105; // should not happen
 		}
+		evar = buf;
 		pos = strnlen(buf, dataln);
-		newenvp[i] = buf;
 		buf += pos+1;
 		dataln -= pos+1;
+
+		if (strncmp(evar, "PWD=", 4) == 0) {
+			// chdir, do not add to env
+			if (chdir(evar+4) != 0) {
+				perror("chdir");
+				return 106;
+			}
+			continue;
+		}
+
+		newenvp[n++] = evar;
 	}
 	if (dataln != 0) {
 		fprintf(stderr, "%s: invalid data: trailing data\n", argv[0]);
-		return 106; // should have consumed everything
+		return 107; // should have consumed everything
 	}
 
 	if ((pathname == NULL) && (newargc > 0)) {
