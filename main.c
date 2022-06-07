@@ -11,17 +11,20 @@ int main(int argc, char *argv[]) {
 	// ssize_t read(int fd, void *buf, size_t count);
 	ssize_t rdln = read(0, &datalen, 4);
 	if (rdln != 4) {
+		fprintf(stderr, "%s: invalid packet length read %ld\n", argv[0], rdln);
 		return 101; // invalid read
 	}
 	uint32_t dataln = (uint32_t)(datalen[0]) << 24 | (uint32_t)(datalen[1]) << 16 | (uint32_t)(datalen[2]) << 8 | (uint32_t)(datalen[3]);
 
 	if ((dataln > 128*1024) || (dataln < 4)) {
+		fprintf(stderr, "%s: invalid packet read %d\n", argv[0], dataln);
 		return 102; // too small or large
 	}
 
 	char *buf = malloc(dataln);
 	rdln = read(0, buf, dataln);
 	if (rdln != dataln) {
+		fprintf(stderr, "%s: invalid data read %ld\n", argv[0], rdln);
 		return 103; // invalid read
 	}
 
@@ -45,6 +48,7 @@ int main(int argc, char *argv[]) {
 
 	for(int i = 0; i < newargc; i++) {
 		if (dataln <= 0) {
+			fprintf(stderr, "%s: invalid data while reading argv\n", argv[0]);
 			return 104; // should not happen
 		}
 		pos = strnlen(buf, dataln);
@@ -54,6 +58,7 @@ int main(int argc, char *argv[]) {
 	}
 	for(int i = 0; i < newenvc; i++) {
 		if (dataln <= 0) {
+			fprintf(stderr, "%s: invalid data while reading envp\n", argv[0]);
 			return 105; // should not happen
 		}
 		pos = strnlen(buf, dataln);
@@ -62,10 +67,12 @@ int main(int argc, char *argv[]) {
 		dataln -= pos+1;
 	}
 	if (dataln != 0) {
+		fprintf(stderr, "%s: invalid data: trailing data\n", argv[0]);
 		return 106; // should have consumed everything
 	}
 
 	execve(pathname, newargv, newenvp);
 
+	fprintf(stderr, "%s: execve() failed\n", argv[0]);
 	return 106; // execve failed
 }
