@@ -3,8 +3,64 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <linux/limits.h>
 
 // this simple program will read from stdin the arguments for execve and run it
+
+char lookup_path_buffer[PATH_MAX+1];
+
+const char *lookup_path(const char *exe) {
+	// lookup for given exe in PATH
+	if (strchr(exe, '/') != NULL) {
+		// if path contains a / anywhere, do not perform lookup
+		return exe;
+	}
+
+	const char *searchpath = getenv("PATH");
+	if (searchpath == NULL) return exe;
+	if (strlen(searchpath) <= 0) return exe;
+
+	int len;
+	int exelen = strlen(exe);
+	const char *beg, *end;
+	beg = searchpath;
+
+	do {
+		end = strchr(beg, ':');
+		if (end == NULL) {
+			strncpy(lookup_path_buffer, beg, PATH_MAX);
+			len = strlen(lookup_path_buffer);
+			beg = NULL;
+		} else {
+			len = end - beg;
+			if (len > PATH_MAX) {
+				// can't handle that long of a path
+				beg = end+1;
+				continue;
+			}
+			memcpy(lookup_path_buffer, beg, len);
+			beg = end+1;
+		}
+
+		if (lookup_path_buffer[len-1] != '/') {
+			lookup_path_buffer[len] = '/';
+			len += 1;
+		}
+		if (len+exelen > PATH_MAX) {
+			// can't handle this
+			continue;
+		}
+		memcpy(lookup_path_buffer+len, exe, exelen);
+		len += exelen;
+		lookup_path_buffer[len] = 0; // ensure it ends with a NULL
+
+		int res = access(lookup_path_buffer, X_OK);
+		if (res == 0) return lookup_path_buffer;
+	} while(end != NULL);
+
+	// not found?
+	return exe;
+}
 
 int main(int argc, char *argv[]) {
 	char datalen[4];
@@ -38,7 +94,11 @@ int main(int argc, char *argv[]) {
 	//
 	// int execve(const char *pathname, char *const argv[], char *const envp[]);
 	int pos = strnlen(buf, dataln);
-	char *pathname = buf;
+	const char *pathname = buf;
+	if (pos == 0) {
+		// if pathname len is zero, set it to NULL so we look it up later
+		pathname = NULL;
+	}
 
 	buf += pos+1;
 	dataln -= pos+1;
@@ -69,6 +129,10 @@ int main(int argc, char *argv[]) {
 	if (dataln != 0) {
 		fprintf(stderr, "%s: invalid data: trailing data\n", argv[0]);
 		return 106; // should have consumed everything
+	}
+
+	if ((pathname == NULL) && (newargc > 0)) {
+		pathname = lookup_path(newargv[0]);
 	}
 
 	execve(pathname, newargv, newenvp);
