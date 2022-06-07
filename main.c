@@ -66,10 +66,25 @@ const char *lookup_path(const char *exe) {
 	return exe;
 }
 
+// readfull reads
+ssize_t readfull(int fd, void *buf, size_t count) {
+	size_t total = 0;
+
+	do {
+		ssize_t v = read(fd, buf, count);
+		if (v == -1) return -1; // failed
+		if (v == 0) return total; // EOF?
+		total += v;
+		buf += v;
+		count -= v;
+	} while(count > 0);
+	return total;
+}
+
 int main(int argc, char *argv[]) {
 	char datalen[4];
 	// ssize_t read(int fd, void *buf, size_t count);
-	ssize_t rdln = read(0, &datalen, 4);
+	ssize_t rdln = readfull(0, &datalen, 4);
 	if (rdln != 4) {
 		fprintf(stderr, "%s: invalid packet length read %ld\n", argv[0], rdln);
 		return 101; // invalid read
@@ -82,7 +97,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	char *buf = malloc(dataln);
-	rdln = read(0, buf, dataln);
+	rdln = readfull(0, buf, dataln);
 	if (rdln != dataln) {
 		fprintf(stderr, "%s: invalid data read %ld\n", argv[0], rdln);
 		return 103; // invalid read
