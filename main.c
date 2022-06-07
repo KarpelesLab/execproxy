@@ -82,7 +82,7 @@ ssize_t readfull(int fd, void *buf, size_t count) {
 }
 
 int main(int argc, char *argv[]) {
-	char datalen[4];
+	unsigned char datalen[4];
 	// ssize_t read(int fd, void *buf, size_t count);
 	ssize_t rdln = readfull(0, &datalen, 4);
 	if (rdln != 4) {
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 	uint32_t dataln = (uint32_t)(datalen[0]) << 24 | (uint32_t)(datalen[1]) << 16 | (uint32_t)(datalen[2]) << 8 | (uint32_t)(datalen[3]);
 
 	if ((dataln > 128*1024) || (dataln < 4)) {
-		fprintf(stderr, "%s: invalid packet read %d\n", argv[0], dataln);
+		fprintf(stderr, "%s: invalid packet read %u\n", argv[0], dataln);
 		return 102; // too small or large
 	}
 
