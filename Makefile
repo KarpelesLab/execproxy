@@ -3,7 +3,8 @@
 CC=gcc
 STRIP=strip
 RM=rm
-PREFIX=/usr/local/bin
+PREFIX=/usr/local
+LIBEXECDIR=$(PREFIX)/libexec
 OBJECTS=main.o
 CFLAGS=-pipe -Wall -O2 --std=gnu99
 LDFLAGS=-static
@@ -21,7 +22,7 @@ $(TARGET): $(OBJECTS)
 .PHONY: install clean
 
 install: $(TARGET)
-	install -D -m0755 "$(TARGET)" "$(DESTDIR)$(PREFIX)"
+	install -D -m0755 "$(TARGET)" "$(DESTDIR)$(LIBEXECDIR)/$(TARGET)"
 
 clean:
 	$(RM) $(TARGET) $(OBJECTS)
