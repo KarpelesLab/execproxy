@@ -3,7 +3,11 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <linux/limits.h>
+
+#ifndef PATH_MAX
+// we define PATH_MAX here, because we always perform checks prior to using it, value doesn't need to be in sync with the OS
+#define PATH_MAX 4096
+#endif
 
 // this simple program will read from stdin the arguments for execve and run it
 
